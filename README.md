@@ -1,2 +1,2 @@
 # LoschmidtMBL
-Project to simulate the Loschmidt echo for MBL-type systems
+Project to study the Loschmidt echo behaviour in quenched MBL systems
