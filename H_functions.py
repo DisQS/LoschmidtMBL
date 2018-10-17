@@ -11,7 +11,6 @@ from datetime import datetime
 import time
 
 
-#..................................counting number of zero
 POPCOUNT_TABLE16 = [0] * 2**16
 for index in range(len(POPCOUNT_TABLE16)):
     POPCOUNT_TABLE16[index] = (index & 1) + POPCOUNT_TABLE16[index >> 1]
@@ -19,23 +18,23 @@ for index in range(len(POPCOUNT_TABLE16)):
 def one_count(v):
     return (POPCOUNT_TABLE16[ v & 0xffff] + POPCOUNT_TABLE16[(v >> 16) & 0xffff])
 
-#..................................from configuration to bin number
+### FROM CONFIGURATION TO BIN NUMBER ###
 def TO_bin(xx):
     return int(xx,2)
 
-#..................................from bin number to configuration
+### FROM BIN NUMBER TO CONFIGURATION ###
 def TO_con(x,L):
     x1=int(x)
     L1=int(L)
     return np.binary_repr(x1, width=L1)
 
-#..................................Binomial
+### BINOMIAL ###
 def comb(n, k):
     kk = factorial(n) / factorial(k) / factorial(n - k)
     uga= int(kk)
     return uga
 
-#..................................Base preparation
+### BASE PREPARATION ###
 def Base_prep(n,k):
     result = []
     for bits in itertools.combinations(range(n), k):
@@ -55,7 +54,7 @@ def BaseNumRes_creation(Dim,LL,B):
             k+=1
     return A
 
-#..................................Hopping preparation
+### HOPPING PREPARATION ###
 def Hop_prep(L,BC):
     if BC == 1:
         Hop_dim=L-1
@@ -63,7 +62,7 @@ def Hop_prep(L,BC):
         Hop_dim=L
     return [TO_con(2**i+2**((i+1)%L),L) for i in range(Hop_dim)]
 
-#..................................Disorder creation
+### DISORDER CREATION ###
 def Dis_Creation(LL,Dis_gen):
 
     dis = np.zeros(LL, dtype=np.float)
@@ -74,7 +73,7 @@ def Dis_Creation(LL,Dis_gen):
             dis[i] = np.cos(2*math.pi*0.721*i/LL)
     return dis
 
-#..................................creation Lin Tables
+### LOOKUP TABLES ###
 def LinTab_Creation(LL,Base,di):
 
     L = int(LL)
@@ -120,7 +119,7 @@ def LinTab_Creation(LL,Base,di):
     #print(LinTab)
     return LinTab
 
-#..................................Lin Look for complete state
+### LIN LOOK FOR COMPLETE TABLE ###
 def LinLook(vec,LL,arr):
 
     Vec  = TO_con(vec,LL)
@@ -130,18 +129,18 @@ def LinLook(vec,LL,arr):
     ind2 = TO_bin(v2)
     return arr[ind1,1]+arr[ind2,3]-1
 
-#..................................Lin Look for RIGHT state
+### LIN LOOK FOR LEFT STATE ###
 def LinLook_LL(vec,arr):
     ind=TO_bin(vec)
     return arr[ind+1,1]
 
 
-#..................................Lin Look for RIGHT state
+### LIN LOOK FOR RIGHT STATE ###
 def LinLook_RR(vec,arr):
     ind=TO_bin(vec)
     return arr[ind+1,3]
 
-#..................................Hamiltonian creation
+### HAMILTONIAN CREATION ###
 def Ham_Dense_Creation(LL,NN,Dim,D,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,LinTab):
 
     J=1.
@@ -185,43 +184,47 @@ def Ham_Dense_Creation(LL,NN,Dim,D,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,LinTab)
 
     return ham
 
-#..................................Eigenspectrum of Ham
+### CALCULATE EIGENVALUES AND EIGENSPECTRUM ###
 def eigval(A):
     E, V = _la.eigh(A)
     return E, V
 
-#..................................Level statistics (Huse-ratio)
+### LEVEL STATISTICS (HUSE RATIO) ###
 def levstat(E):
     delta = E[1:]-E[:-1]
     r = list(map(lambda x,y:min(x,y)*1./max(x,y), delta[1:], delta[:-1]))
     avg = np.mean(r)
-    return r, avg
+    return avg
 
+### INVERSE PARTICIPATION RATIO ###
 def InvPartRatio(Evec):
     IPR = np.zeros(len(Evec))
     for i in range(len(Evec)):
         IPR[i] = np.sum(Evec[i]**4)
     return IPR
-    
-#..................................................Initial state
-def Psi_0(Dim):
-    n = np.random.randint(0,Dim-1)
+
+### INITIAL STATE INDEX ###
+def Psi_0(Dim, L, Base_num, in_flag):
+    if in_flag == 0:
+        n = np.random.randint(0,Dim-1)
+    else:
+        ind = TO_con(sum([2**i for i in range(1, L, 2)]), L)
+        n = Base_num.index(ind)
     return n
 
-#.................................................Initial state projected on eigenket
+### INITIAL STATE PROJECTED ###
 def Proj_Psi0(a,V):
     return V[a]
 
-#.................................Time evolution
+### TIME EVOLUTION ###
 def TimEvolve(Proj_Psi0, E, t):
     psit0 = Proj_Psi0
     psit = np.exp(-1j*E*t)*psit0
     return psit
 
-#.................................Loschmidt Amplitude and Loschmidt Echo
+### LOSCHMIDT ECHO ###
 def Loschmidt(Psi_t, Proj_Psi0):
-    G = np.dot(Proj_Psi0, Psi_t)
-    L = (abs(G))**2
+    L = np.square(np.absolute(np.dot(Proj_Psi0, Psi_t)))
     return L
 
 def generate_filename(basename):
@@ -232,10 +235,3 @@ def generate_filename(basename):
         time.sleep(1)
         return generate_filename(basename)
     return xx
-
-def time_tab(t_i,t_f,Nstep,Lo_li):
-    if Lo_li == 0:
-        t_tab = np.insert(10**-5,1,np.linspace(t_i,t_f, num=Nstep, dtype=float))
-    else:
-        t_tab = np.insert(10**-5,1,np.logspace(np.log10(t_i),np.log10(t_f), num=Nstep, dtype=float))
-    return t_tab
