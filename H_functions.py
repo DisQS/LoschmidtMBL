@@ -207,8 +207,11 @@ def InvPartRatio(Evec):
 def Psi_0(Dim, L, Base_num, in_flag):
     if in_flag == 0:
         n = np.random.randint(0,Dim-1)
-    else:
+    elif in_flag == 1:
         ind = TO_con(sum([2**i for i in range(1, L, 2)]), L)
+        n = Base_num.index(ind)
+    else:
+        ind = TO_con(sum([2**i for i in range(0,L//2, 1)]),L)[::-1]
         n = Base_num.index(ind)
     return n
 
@@ -226,6 +229,14 @@ def TimEvolve(Proj_Psi0, E, t):
 def Loschmidt(Psi_t, Proj_Psi0):
     L = np.square(np.absolute(np.dot(Proj_Psi0, Psi_t)))
     return L
+
+### MAGNETIZATION PROFILE ###
+#..................................................dens
+def magnetization(V,Base_NumRes):
+    Sz   = np.dot(np.transpose(V**2),Base_NumRes)
+    #equivalente a fare:
+    #dens = np.einsum('jn,jn,ji -> ni', V, V, Base_NumRes)
+    return Sz
 
 def generate_filename(basename):
     unix_timestamp = int(time.time())

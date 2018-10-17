@@ -8,7 +8,7 @@ LOCAL = os.path.abspath('.')
 
 #....................................SIZE
 L_i = 8
-L_f = 12
+L_f = 8
 L_D = 2
 
 L_n = int(1+(L_f-L_i)/L_D)
@@ -20,8 +20,8 @@ for L in L_tab:
 	nomefile = 'LevStat_'+str(L)+'.npy'
 
 #....................................DISORDER
-D_i = 2.0
-D_f = 6.0
+D_i = 0.0
+D_f = 0.0
 D_D = 1.0
 
 D_n = int(1+(D_f-D_i)/D_D)
@@ -35,7 +35,7 @@ D1 = 2
 
 PATH_now = LOCAL
 
-NN_RR = 500
+NN_RR = 1
 
 for i in L_tab:
 

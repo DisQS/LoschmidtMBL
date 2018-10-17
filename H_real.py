@@ -23,6 +23,7 @@ def ExDiag(PATH_now,L,D):
 	### BASE CREATION ###
 	Base_num = hf.Base_prep(LL,NN)
 	Base_bin = [int(Base_num[i], 2) for i in range(Dim)]
+	Base_NumRes = hf.BaseNumRes_creation(Dim,LL,Base_num)
 
 	### HOPPING CREATION ###
 	if BC == 1:
@@ -51,11 +52,11 @@ def ExDiag(PATH_now,L,D):
 	E_norm = (Eval[1:]-min(Eval[1:]))/(max(Eval[1:])- min(Eval[1:]))
 
 	### LEVEL STATISTICS (MIDDLE OF THE SPECTRUM) ###
-	#Eval_mid = E_norm[int(Dim/3):int(2*Dim/3)]
-	#ravg = hf.levstat(Eval_mid)
-	#nomefile_lev = str(PATH_now+'Levst_L'+str(LL)+'_D'+str(D)+'.dat')
-	#with open(nomefile_lev, 'a') as ee:
-	#	ee.write('%f' % ravg +"\n")
+	Eval_mid = E_norm[int(Dim/3):int(2*Dim/3)]
+	ravg = hf.levstat(Eval_mid)
+	nomefile_lev = str(PATH_now+'Levst_L'+str(LL)+'_D'+str(D)+'.dat')
+	with open(nomefile_lev, 'a') as ee:
+		ee.write('%f' % ravg +"\n")
 
 	# INVERSE PARTICIPATION RATIO ###
 	#ipr = hf.InvPartRatio(Evec)
@@ -65,25 +66,33 @@ def ExDiag(PATH_now,L,D):
 	#with open(nomefile_ipr, 'a') as ee:
 	#	ee.write('%f' % avg_ipr % "\n")
 
-	#.............................Time Evolution starting from a random state
+	### TIME EVOLUTION AND OBSERVABLES ###
 	t_i   = float(0.0)
 	t_f   = float(10.0)
-	Nstep = int(50)
-	tmp_tab = np.logspace(t_i, t_f, Nstep)
-	t_tab = np.sort(np.append(tmp_tab, [0, 0.25, 0.5, 0.75]))
+	Nstep = int(100)
+	tmp_tab = np.linspace(t_i, t_f, Nstep)
+	#t_tab = np.sort(np.append(tmp_tab, [0, 0.25, 0.5, 0.75]))
 
-	in_flag = 1
+	in_flag = 2
 
 	Psi0 = hf.Psi_0(Dim, LL, Base_num, in_flag)
 	ProjPsi0 = hf.Proj_Psi0(Psi0, Evec)
 
-	for t in t_tab:
+	for t in tmp_tab:
 		Psit = hf.TimEvolve(ProjPsi0, Eval, t)
-		#Losch = hf.Loschmidt(Psit, ProjPsi0)
-		#nomefile_losch = str(PATH_now+'Losch_t' + str(t) + '.dat')
-		#with open(nomefile_losch, 'a') as file:
-		#	file.write('%f' % Losch +"\n")
+
+		Losch = hf.Loschmidt(Psit, ProjPsi0)
+		nomefile_losch = str(PATH_now+'Losch_t' + str(t) + '.dat')
+		with open(nomefile_losch, 'a') as file:
+			file.write('%f' % Losch +"\n")
+
 		VnEnt = ent.compute_entanglement_entropy(Psit, LL, NN, NN)
 		nomefile_ent = str(PATH_now+'Ent_t' + str(t) + '.dat')
 		with open(nomefile_ent, 'a') as file:
 			file.write('%f' % VnEnt +"\n")
+
+		Exp_Sz = hf.magnetization(Psit, Base_NumRes)
+		nomefile_mag = str(PATH_now+'Mag_t' + str(t) + '.dat')
+		with open(nomefile_mag, 'w') as file:
+			for i in range(len(Exp_Sz)):
+				file.write('%f' % np.real(Exp_Sz[i]) +'   %i' % int(i+1) +"\n")
