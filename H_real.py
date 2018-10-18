@@ -81,18 +81,19 @@ def ExDiag(PATH_now,L,D):
 	for t in tmp_tab:
 		Psit = hf.TimEvolve(ProjPsi0, Eval, t)
 
-		Losch = hf.Loschmidt(Psit, ProjPsi0)
-		nomefile_losch = str(PATH_now+'Losch_t' + str(t) + '.dat')
-		with open(nomefile_losch, 'a') as file:
-			file.write('%f' % Losch +"\n")
+		#Losch = hf.Loschmidt(Psit, ProjPsi0)
+		#nomefile_losch = str(PATH_now+'Losch_t' + str(t) + '.dat')
+		#with open(nomefile_losch, 'a') as file:
+		#	file.write('%f' % Losch +"\n")
 
-		VnEnt = ent.compute_entanglement_entropy(Psit, LL, NN, NN)
-		nomefile_ent = str(PATH_now+'Ent_t' + str(t) + '.dat')
-		with open(nomefile_ent, 'a') as file:
-			file.write('%f' % VnEnt +"\n")
+		#VnEnt = ent.compute_entanglement_entropy(Psit, LL, NN, NN)
+		#nomefile_ent = str(PATH_now+'Ent_t' + str(t) + '.dat')
+		#with open(nomefile_ent, 'a') as file:
+		#	file.write('%f' % VnEnt +"\n")
 
 		Exp_Sz = hf.magnetization(Psit, Base_NumRes)
-		nomefile_mag = str(PATH_now+'Mag_t' + str(t) + '.dat')
+		nomefile_mag_profile = str(PATH_now+'Mag_t' + str(t) + '.dat')
+		nomefile_mag
 		with open(nomefile_mag, 'w') as file:
 			for i in range(len(Exp_Sz)):
-				file.write('%f' % np.real(Exp_Sz[i]) +'   %i' % int(i+1) +"\n")
+				file.write('%f' % np.real(Exp_Sz[i]) +'   %i' % int(i+1) + '   %f' %np.sum(Exp_Sz)+"\n")

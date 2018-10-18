@@ -231,12 +231,12 @@ def Loschmidt(Psi_t, Proj_Psi0):
     return L
 
 ### MAGNETIZATION PROFILE ###
-#..................................................dens
 def magnetization(V,Base_NumRes):
     Sz   = np.dot(np.transpose(V**2),Base_NumRes)
-    #equivalente a fare:
-    #dens = np.einsum('jn,jn,ji -> ni', V, V, Base_NumRes)
-    return Sz
+    ### Total magnetization for half chain ###
+    Ch_L = len(Sz)
+    Tot_Sz = np.sum(Sz[0:(Ch_L/2-1)])
+    return Sz, Tot_Sz
 
 def generate_filename(basename):
     unix_timestamp = int(time.time())
