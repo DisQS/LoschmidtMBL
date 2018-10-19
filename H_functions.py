@@ -54,17 +54,30 @@ def BaseNumRes_creation(Dim,LL,B):
             k+=1
     return A
 
-### HOPPING PREPARATION ###
 def Hop_prep(L,BC):
+    """Hopping list
+    Args:
+        L(int)                          = Size of the chain
+        BC(int)                         = Boundary conditions flag (0 ---> periodic
+                                                                    1 ---> open)
+    Returns:
+        Hopping list
+    """
     if BC == 1:
         Hop_dim=L-1
     else:
         Hop_dim=L
     return [TO_con(2**i+2**((i+1)%L),L) for i in range(Hop_dim)]
 
-### DISORDER CREATION ###
 def Dis_Creation(LL,Dis_gen):
-
+    """Random fields creation
+    Args:
+        LL(int)                         = Size of the chain
+        Dis_gen(int)                    = Disorder flag (0 ---> Random
+                                                         1 ---> Quasiperiodic)
+    Returns:
+        dis(1d array of floats)         = Random field per site
+    """
     dis = np.zeros(LL, dtype=np.float)
     for i in range(LL):
         if Dis_gen==0:
@@ -79,16 +92,12 @@ def LinTab_Creation(LL,Base,di):
     L = int(LL)
     Dim=int(di)
 
-	#..........................Table Creation
     MaxSizeLINVEC = sum([2**(i-1) for i in range(1,int(L/2+1))])
 
-    #....creates a table LinTab_L+LinTab_R
-    #.....................[  ,  ]+[  ,  ]
     LinTab   = np.zeros((MaxSizeLINVEC+1,4),dtype=int)
     Jold     = JJ=j1=j2=0
     Conf_old = TO_con(0,int(L/2))
 
-	#...........................Table Filling
     for i in range(Dim):
         Conf_lx = Base[i][0:int(L/2)]
         Bin_lx  = TO_bin(Conf_lx)
@@ -140,8 +149,24 @@ def LinLook_RR(vec,arr):
     ind=TO_bin(vec)
     return arr[ind+1,3]
 
-### HAMILTONIAN CREATION ###
 def Ham_Dense_Creation(LL,NN,Dim,D,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,LinTab):
+    """
+    Compute the Hamiltonian matrix
+
+    Args:
+        LL(int)                         = Size of the chain
+        NN(int)                         = Number of particles
+        Dim(int)                        = Dimension of the Hilbert SPACE
+        Dis_real(1d array of floats)    = Random disorder fields
+        BC(int)                         = Boundary conditions flag (0 ---> periodic
+                                                                    1 ---> open)
+        Base_bin(1d array of int)       = Configuration basis
+        Base_num(1d array of str)       = Basis states in binary representation
+        Hop_bin(1d array of floats)     = Hopping list
+        LinTab(2d array of int)         = Lookup table
+    Returns:
+        ham(2d array of floats)         = Hamiltonian matrix
+    """
 
     J=1.
 
@@ -184,27 +209,54 @@ def Ham_Dense_Creation(LL,NN,Dim,D,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,LinTab)
 
     return ham
 
-### CALCULATE EIGENVALUES AND EIGENSPECTRUM ###
 def eigval(A):
+    """Diagonalize the Hamiltonian
+    Args:
+        A(2d array of floats)           = Matrix to be diagonalized (Hamiltonian)
+    Returns:
+        E(1d array of floats)           = Eigenvalues
+        V(2d array of floats)           = Eigenvectors (in columns!)
+    """
     E, V = _la.eigh(A)
     return E, V
 
-### LEVEL STATISTICS (HUSE RATIO) ###
 def levstat(E):
+    """Calculate the statistics of the ratio r between adjacent energy gaps
+    (see A.Pal and D.Huse, Phys. Rev. B 82, 174411)
+    Args:
+        E(1d array of floats)           = Eigenvalues
+    Returns:
+        avg(float)                      = Mean of r
+    """
     delta = E[1:]-E[:-1]
     r = list(map(lambda x,y:min(x,y)*1./max(x,y), delta[1:], delta[:-1]))
     avg = np.mean(r)
     return avg
 
-### INVERSE PARTICIPATION RATIO ###
 def InvPartRatio(Evec):
+    """Calculate participation ratios
+    Args:
+        Evec(2d array of floats)        = Eigenvectors (in columns)
+    Returns:
+        IPR(1d array of floats)         = Inverse participation ratio for each eigenstate
+    """
     IPR = np.zeros(len(Evec))
     for i in range(len(Evec)):
         IPR[i] = np.sum(Evec[i]**4)
     return IPR
 
-### INITIAL STATE INDEX ###
 def Psi_0(Dim, L, Base_num, in_flag):
+    """Index for the initial state for time evolution
+    Args:
+        Dim(int)                        = Dimension of Hilbert space
+        L(int)                          = Size fo the chain
+        Base_num(1d array of str)       = Basis states in binary representation
+        in_flag(int)                    = Flag for initial state (0 ---> random,
+                                                                  1 ---> 1010101010,
+                                                                  2 ---> 1111100000)
+    Returns:
+        n(int)                          = Index of the chosen initial state in Base_num
+    """
     if in_flag == 0:
         n = np.random.randint(0,Dim-1)
     elif in_flag == 1:
@@ -215,28 +267,55 @@ def Psi_0(Dim, L, Base_num, in_flag):
         n = Base_num.index(ind)
     return n
 
-### INITIAL STATE PROJECTED ###
 def Proj_Psi0(a,V):
+    """Initial state projected on the eigenbasis
+    Args:
+        a(int)                          = Index of the chosen initial state
+        V(2d array of floats)           = Eigenvectors (in columns)
+    Returns:
+        V[a](1d array of floats)        = Initial state in the configuration basis
+    """
     return V[a]
 
-### TIME EVOLUTION ###
 def TimEvolve(Proj_Psi0, E, t):
+    """Time evolution of initial state
+    Args:
+        Proj_Psi0(1d array of floats)   = Initial state
+        E(1d array of floats)           = Eigenspectrum
+        t(float)                        = Time
+    Returns:
+        psit(1d array of complex)       = State evolved at time t
+    """
     psit0 = Proj_Psi0
     psit = np.exp(-1j*E*t)*psit0
     return psit
 
-### LOSCHMIDT ECHO ###
 def Loschmidt(Psi_t, Proj_Psi0):
+    """Calculate survival probability at time t
+    (see Markus Heyl review, Rep. Prog. Phys. 81, 054001 (2018))
+    Args:
+        Psit(1d array of complex)       = State evolved at time t
+        Proj_Psi0(1d array of floats)   = Initial state
+    Returns:
+        L(float)                        = Loschmidt echo at time t
+    """
     L = np.square(np.absolute(np.dot(Proj_Psi0, Psi_t)))
     return L
 
-### MAGNETIZATION PROFILE ###
-#..................................................dens
 def magnetization(V,Base_NumRes):
+    """Calculate magnetization profile and total magnetization for half-chain (not conserved)
+    (see R. Singh et al., NJP 18, 023046 (2016))
+    Args:
+        V(1d array of floats)           = State vector
+        Base_NumRes(1d array of int)    = Spin operator basis
+    Returns:
+        Sz(1d array of floats)          = Magnetization value at each site
+        Tot_Sz(float)                   = Total magnetization for half chain
+    """
     Sz   = np.dot(np.transpose(V**2),Base_NumRes)
-    #equivalente a fare:
-    #dens = np.einsum('jn,jn,ji -> ni', V, V, Base_NumRes)
-    return Sz
+    Ch_L = len(Sz)
+    Tot_Sz = np.sum(np.real(Sz[0:int((Ch_L/2-1))]))
+    return Sz, Tot_Sz
 
 def generate_filename(basename):
     unix_timestamp = int(time.time())
