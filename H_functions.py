@@ -67,7 +67,7 @@ def Base_prep(n,k):
         n(int)                          = Size of the chain
         k(int)                          = Number of spin-up
     Returns:
-        conf(1d array of str)         = Configuration basis
+        conf(1d array of str)           = Configuration basis
     """
     conf = []
     for bits in itertools.combinations(range(n), k):
@@ -254,7 +254,7 @@ def Ham_Sparse_Creation(LL,NN,Dim,D,Jzz,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,Li
         Hop_bin(1d array of floats)     = Hopping list
         LinTab(2d array of int)         = Lookup table
     Returns:
-        ham(CSC sparse matrix)         = Hamiltonian matrix
+        ham(CSC sparse matrix)          = Hamiltonian matrix
     """
 
     J=1.
@@ -313,7 +313,7 @@ def eigval(A):
     """
     type = mat_format(A)
     if type == 'Sparse':
-        E,V = _sp.linalg.eigsh(A, k = 50, which='SA', return_eigenvectors=True)
+        E,V = _sp.linalg.eigsh(A, k = 100, which='SA', return_eigenvectors=True)
     else:
         E, V = _la.eigh(A)
     return E, V
@@ -332,17 +332,25 @@ def levstat(E):
     avg = np.mean(r)
     return avg
 
-def InvPartRatio(Evec):
+def InvPartRatio(Evec,A):
     """Calculate participation ratios
     Args:
         Evec(2d array of floats)        = Eigenvectors (in columns)
     Returns:
         IPR(1d array of floats)         = Inverse participation ratio for each eigenstate
     """
-    IPR = np.zeros(len(Evec))
-    for i in range(len(Evec)):
-        IPR[i] = np.sum(Evec[i]**4)
-    return IPR
+    type = mat_format(A)
+    if type == 'Sparse':
+        IPR = np.zeros(50)
+        for i in range(len(IPR)):
+            IPR[i] = np.sum(Evec[:,i]**4)
+        IPR_sum = np.sum(IPR)
+    else:
+        IPR = np.zeros(len(Evec))
+        for i in range(len(IPR)):
+            IPR[i] = np.sum(Evec[:,i]**4)
+        IPR_sum = np.sum(IPR)
+    return IPR_sum
 
 def Psi_0(Dim, L, Base_num, in_flag):
     """Index of the initial state for time evolution

@@ -45,7 +45,7 @@ def ExDiag(PATH_now,L,D,Jzz):
 
 
 	#### DIAGONALIZATION ###
-	Eval, Evec = hf.eigval(HAM, Dim)
+	Eval, Evec = hf.eigval(HAM)
 
 	### NORMALIZE SPECTRUM ###
 	E_norm = (Eval[1:]-min(Eval[1:]))/(max(Eval[1:])- min(Eval[1:]))
@@ -58,20 +58,18 @@ def ExDiag(PATH_now,L,D,Jzz):
 		ee.write('%f' % ravg +"\n")
 
 	### INVERSE PARTICIPATION RATIO ###
-	ipr = 1/hf.InvPartRatio(Evec)
-	ipr_norm = (1/Dim)*ipr
-	avg_ipr = np.mean(ipr)
-	nomefile_ipr = str(PATH_now+'IPRavg_L'+str(LL)+'_D'+str(D)+'.dat')
+	ipr = (1/Evec.shape[1])*(hf.InvPartRatio(Evec, HAM))
+	nomefile_ipr = str(PATH_now+'IPR_L'+str(LL)+'_D'+str(D)+'.dat')
 	with open(nomefile_ipr, 'a') as ee:
-		ee.write('%f' % avg_ipr % "\n")
+		ee.write('%f' % ipr + "\n")
 
 	# Psi0 = hf.Psi_0(Dim, LL, Base_num, in_flag)
 	# ProjPsi0 = hf.Proj_Psi0(Psi0, Evec)
 	#
 	# ### TIME EVOLUTION AND OBSERVABLES ###
-	# t_i   = float(0.0)
+	# t_i   = params.t_i
 	# t_f   = float(10.0)
-	# Nstep = int(100)
+	# Nstep = params.t_steps
 	# tmp_tab = np.logspace(t_i, t_f, Nstep)
 	# t_tab = np.sort(np.append(tmp_tab, [0, 0.25, 0.5, 0.75]))
 	#

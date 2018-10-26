@@ -3,15 +3,16 @@ import H_real as hr
 import os
 from time import gmtime, strftime
 import time
+import params
 
 LOCAL = os.path.abspath('.')
 
 ### INTERACTIONS ###
-Jzz = 1.0
+Jzz = params.Jz
 
 ### SIZE ###
-L_i = 8
-L_f = 8
+L_i = 10
+L_f = 10
 L_D = 2
 
 L_n = int(1+(L_f-L_i)/L_D)
@@ -31,7 +32,7 @@ D_tab = [D_i+j*D_D for j in range(D_n)]
 PATH_now = LOCAL
 
 ### NUMBER OF REAL ###
-NN_RR = 500
+NN_RR = params.N_real
 
 for i in L_tab:
 	for j in D_tab:
