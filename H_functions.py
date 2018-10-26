@@ -4,7 +4,8 @@ import scipy.linalg as _la
 from math import factorial
 import itertools
 import time
-import scipy.sparse as sp
+import scipy.sparse as _sp
+from scipy.sparse import linalg
 import os
 import os.path
 from datetime import datetime
@@ -53,7 +54,7 @@ def mat_format(A):
         mat_type(string)                = Type of A, "Sparse" or "Dense"
     """
     form = str(type(A))
-    spar_str = "<class "
+    spar_str = "<class 's"
     if form.startswith(spar_str):
         mat_type = "Sparse"
     else:
@@ -299,10 +300,10 @@ def Ham_Sparse_Creation(LL,NN,Dim,D,Jzz,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,Li
         j_ind.append(bra)
         vals.append(J*(Jzz*n_int + D*n_dis))
 
-    ham = sp.coo_matrix((vals,(i_ind, j_ind))).tocsc()
+    ham = _sp.coo_matrix((vals,(i_ind, j_ind))).tocsc()
     return ham
 
-def eigval(A, Dim):
+def eigval(A):
     """Diagonalize the Hamiltonian
     Args:
         A(2d array of floats)           = Matrix to be diagonalized (Hamiltonian)
@@ -312,7 +313,7 @@ def eigval(A, Dim):
     """
     type = mat_format(A)
     if type == 'Sparse':
-        E,V = sp.linalg.eigsh(A, k = 50, which='SA', return_eigenvectors=True)
+        E,V = _sp.linalg.eigsh(A, k = 50, which='SA', return_eigenvectors=True)
     else:
         E, V = _la.eigh(A)
     return E, V
@@ -344,7 +345,7 @@ def InvPartRatio(Evec):
     return IPR
 
 def Psi_0(Dim, L, Base_num, in_flag):
-    """Index for the initial state for time evolution
+    """Index of the initial state for time evolution
     Args:
         Dim(int)                        = Dimension of Hilbert space
         L(int)                          = Size fo the chain
