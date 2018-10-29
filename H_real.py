@@ -3,9 +3,11 @@ import time
 import scipy.special as special
 import H_functions as hf
 import H_ent as ent
+import scipy.sparse as _sp
+from scipy.sparse import linalg
 import params
 
-def ExDiag(PATH_now,L,D,Jzz):
+def ExDiag(PATH_now,L,D, D_quench, Jzz):
 	t0=time.time()
 
 	BC = params.BC
@@ -14,6 +16,7 @@ def ExDiag(PATH_now,L,D,Jzz):
 	in_flag = params.In_flag
 	LL = int(L)
 	DD = float(D)
+	DD_quench = float(D_quench)
 	NN = int(LL/2)
 	Dim = int(hf.comb(LL, NN))
 
@@ -41,31 +44,52 @@ def ExDiag(PATH_now,L,D,Jzz):
 	if form_flag == 0:
 		HAM = hf.Ham_Dense_Creation(LL,NN,Dim,DD,Jzz,Dis_real,BC,Base_bin,Base_num,Hop_bin,LinTab)
 	else:
-		HAM = hf.Ham_Sparse_Creation(LL,NN,Dim,DD,Jzz,Dis_real,BC,Base_bin,Base_num,Hop_bin,LinTab)
+		HAM, dis0 = hf.Ham_Sparse_Creation(LL,NN,Dim,DD,Jzz,Dis_real,BC,Base_bin,Base_num,Hop_bin,LinTab)
 
 
 	#### DIAGONALIZATION ###
 	Eval, Evec = hf.eigval(HAM)
 
-	### NORMALIZE SPECTRUM ###
-	E_norm = (Eval[1:]-min(Eval[1:]))/(max(Eval[1:])- min(Eval[1:]))
+	### IF HAM DENSE, CALCULATE STATIC OBSERVABLES, IF SPARSE CALCULATE DYNAMICS ###
+	if form_flag == 0:
+		### NORMALIZE SPECTRUM ###
+		E_norm = (Eval[1:]-min(Eval[1:]))/(max(Eval[1:])- min(Eval[1:]))
 
-	### LEVEL STATISTICS (MIDDLE OF THE SPECTRUM) ###
-	Eval_mid = E_norm[int(Dim/3):int(2*Dim/3)]
-	ravg = hf.levstat(Eval_mid)
-	nomefile_lev = str(PATH_now+'Levst_L'+str(LL)+'_D'+str(D)+'.dat')
-	with open(nomefile_lev, 'a') as ee:
-		ee.write('%f' % ravg +"\n")
+		### LEVEL STATISTICS (MIDDLE OF THE SPECTRUM) ###
+		Eval_mid = E_norm[int(Dim/3):int(2*Dim/3)]
+		ravg = hf.levstat(Eval_mid)
+		nomefile_lev = str(PATH_now+'Levst_L'+str(LL)+'_D'+str(D)+'.dat')
+		with open(nomefile_lev, 'a') as ee:
+			ee.write('%f' % ravg +"\n")
 
-	### INVERSE PARTICIPATION RATIO ###
-	ipr = (1/Evec.shape[1])*(hf.InvPartRatio(Evec, HAM))
-	nomefile_ipr = str(PATH_now+'IPR_L'+str(LL)+'_D'+str(D)+'.dat')
-	with open(nomefile_ipr, 'a') as ee:
-		ee.write('%f' % ipr + "\n")
+		### INVERSE PARTICIPATION RATIO ###
+		ipr = (1/Evec.shape[1])*(hf.InvPartRatio(Evec, HAM))
+		nomefile_ipr = str(PATH_now+'IPR_L'+str(LL)+'_D'+str(D)+'.dat')
+		with open(nomefile_ipr, 'a') as ee:
+			ee.write('%f' % ipr + "\n")
 
-	# Psi0 = hf.Psi_0(Dim, LL, Base_num, in_flag)
-	# ProjPsi0 = hf.Proj_Psi0(Psi0, Evec)
-	#
+	#Psi0 = hf.Psi_0(Dim, LL, Base_num, in_flag)
+	#ProjPsi0 = hf.Proj_Psi0(Psi0, Evec)
+
+	else:
+		Psi0 = Evec[:,0]
+		Diag_quench = HAM.diagonal()-(DD_quench*(np.asarray(dis0)))
+		HAM.setdiag(Diag_quench)
+		HAM_quench = HAM
+
+		A = -1.0j*HAM_quench
+
+		t_i = params.t_i
+		steps = params.t_steps
+		dt = 0.1
+		t_f = dt*steps
+
+		Psit = linalg.expm_multiply(A, Psi0, start=t_i, stop=t_f, num=steps, endpoint=True)
+		SurvP = [(-1/LL)*np.log(hf.Loschmidt(Psit[i], Psi0)) for i in range(len(Psit))]
+
+		nomefile_losch = str(PATH_now+'Losch.dat')
+		np.savetxt(nomefile_losch, SurvP, fmt='%.9f')
+
 	# ### TIME EVOLUTION AND OBSERVABLES ###
 	# t_i   = params.t_i
 	# t_f   = float(10.0)
