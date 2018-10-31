@@ -266,6 +266,7 @@ def Ham_Sparse_Creation(LL,NN,Dim,D,Jzz,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,Li
     i_ind = []
     j_ind = []
     vals  = []
+    dis = []
     for i in range(Dim):
         n_int = 0.0
         n_dis = 0.0
@@ -296,12 +297,13 @@ def Ham_Sparse_Creation(LL,NN,Dim,D,Jzz,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,Li
             else:
                 n_dis -= 0.5*Dis_real[j]
 
+        dis.append(n_dis)
         i_ind.append(bra)
         j_ind.append(bra)
         vals.append(J*(Jzz*n_int + D*n_dis))
 
     ham = _sp.coo_matrix((vals,(i_ind, j_ind))).tocsc()
-    return ham
+    return ham, dis
 
 def eigval(A):
     """Diagonalize the Hamiltonian
@@ -313,7 +315,7 @@ def eigval(A):
     """
     type = mat_format(A)
     if type == 'Sparse':
-        E,V = _sp.linalg.eigsh(A, k = 100, which='SA', return_eigenvectors=True)
+        E,V = _sp.linalg.eigsh(A, k = 1, which='SA', return_eigenvectors=True)
     else:
         E, V = _la.eigh(A)
     return E, V
