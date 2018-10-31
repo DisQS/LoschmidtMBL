@@ -3,12 +3,16 @@ import H_real as hr
 import os
 from time import gmtime, strftime
 import time
+import params
 
 LOCAL = os.path.abspath('.')
 
-### SIZE LOOP ###
-L_i = 12
-L_f = 12
+### INTERACTIONS ###
+Jzz = params.Jz
+
+### SIZE ###
+L_i = 10
+L_f = 10
 L_D = 2
 
 L_n = int(1+(L_f-L_i)/L_D)
@@ -17,31 +21,29 @@ L_tab = [int(L_i+j*L_D) for j in range(L_n)]
 for L in L_tab:
 	nomefile = 'LevStat_'+str(L)+'.npy'
 
-### DISORDER LOOP ###
-D_i = 0.0
-D_f = 0.0
-D_D = 1.0
+### DISORDER ###
+D_i = 1.0
+D_f = 1.0
+D_D = 0.5
 
 D_n = int(1+(D_f-D_i)/D_D)
 D_tab = [D_i+j*D_D for j in range(D_n)]
 
-### REALIZATION LOOP ###
 PATH_now = LOCAL
 
-NN_RR = 1
+### NUMBER OF REAL ###
+NN_RR = params.N_real
 
 for i in L_tab:
-
 	for j in D_tab:
 		directory = 'DATA/L_'+str(i)+'/D_'+str(j)
 		PATH_now = LOCAL+os.sep+directory+os.sep
 		if not os.path.exists(PATH_now):
 			os.makedirs(PATH_now)
-
 		for n in range(NN_RR):
 			data = [i,j,n+1]
 			AA=time.clock()
-			hr.ExDiag(PATH_now,data[0],data[1])
-			print(time.clock()-AA)
+			hr.ExDiag(PATH_now,data[0],data[1], Jzz)
+			print(i, j, time.clock()-AA)
 
 	#n0 += 1

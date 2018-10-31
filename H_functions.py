@@ -1,12 +1,13 @@
 import numpy as np
-import os.path
 import math
 import scipy.linalg as _la
 from math import factorial
 import itertools
 import time
-import scipy.special as special
+import scipy.sparse as _sp
+from scipy.sparse import linalg
 import os
+import os.path
 from datetime import datetime
 import time
 
@@ -16,6 +17,12 @@ for index in range(len(POPCOUNT_TABLE16)):
     POPCOUNT_TABLE16[index] = (index & 1) + POPCOUNT_TABLE16[index >> 1]
 
 def one_count(v):
+    """Count the number of bits different from 0 for a certain value
+    Args:
+        v(int)                          = value
+    Returns:
+        (int)                           = # of bits different from 0 in binary representation of v
+    """
     return (POPCOUNT_TABLE16[ v & 0xffff] + POPCOUNT_TABLE16[(v >> 16) & 0xffff])
 
 ### FROM CONFIGURATION TO BIN NUMBER ###
@@ -28,21 +35,47 @@ def TO_con(x,L):
     L1=int(L)
     return np.binary_repr(x1, width=L1)
 
-### BINOMIAL ###
 def comb(n, k):
+    """Binomial coefficient function
+    Args:
+        n,k(int)
+    Returns:
+        bin_coef(int)
+    """
     kk = factorial(n) / factorial(k) / factorial(n - k)
-    uga= int(kk)
-    return uga
+    bin_coef = int(kk)
+    return bin_coef
 
-### BASE PREPARATION ###
+def mat_format(A):
+    """Find the type of a matrix(dense or sparse)
+    Args:
+        A(2d array of floats)           = Dense or sparse Matrix
+    Returns:
+        mat_type(string)                = Type of A, "Sparse" or "Dense"
+    """
+    form = str(type(A))
+    spar_str = "<class 's"
+    if form.startswith(spar_str):
+        mat_type = "Sparse"
+    else:
+        mat_type = "Dense"
+    return mat_type
+
 def Base_prep(n,k):
-    result = []
+    """Prepare basis in configurational representation (01010101010...etc)
+    Args:
+        n(int)                          = Size of the chain
+        k(int)                          = Number of spin-up
+    Returns:
+        conf(1d array of str)           = Configuration basis
+    """
+    conf = []
     for bits in itertools.combinations(range(n), k):
         s = ['0'] * n
         for bit in bits:
             s[bit] = '1'
-        result.append(''.join(s))
-    return result
+        conf.append(''.join(s))
+    return conf
 
 def BaseNumRes_creation(Dim,LL,B):
     A=np.zeros((Dim,LL), dtype=np.float)
@@ -61,7 +94,7 @@ def Hop_prep(L,BC):
         BC(int)                         = Boundary conditions flag (0 ---> periodic
                                                                     1 ---> open)
     Returns:
-        Hopping list
+        Hopping(list of floats)
     """
     if BC == 1:
         Hop_dim=L-1
@@ -86,8 +119,15 @@ def Dis_Creation(LL,Dis_gen):
             dis[i] = np.cos(2*math.pi*0.721*i/LL)
     return dis
 
-### LOOKUP TABLES ###
 def LinTab_Creation(LL,Base,di):
+    """Create lookup table
+    Args:
+        LL(int)                         = Size of the chain
+        Base(1d array of str)           = Basis states in configuration representation
+        di(int)                         = Dimension of Hilbert space
+    Returns:
+        LinTab(2d array of int)         = Lookup table
+    """
 
     L = int(LL)
     Dim=int(di)
@@ -128,9 +168,13 @@ def LinTab_Creation(LL,Base,di):
     #print(LinTab)
     return LinTab
 
-### LIN LOOK FOR COMPLETE TABLE ###
 def LinLook(vec,LL,arr):
-
+    """Look for complete table
+    Args:
+        vec(1d array of int)            = Vector
+        LL(int)                         = Size of the chain
+        arr(2d array of int)            = Lookup table
+    """
     Vec  = TO_con(vec,LL)
     v1   = Vec[0:int(LL/2)]
     v2   = Vec[int(LL/2):LL]
@@ -138,26 +182,15 @@ def LinLook(vec,LL,arr):
     ind2 = TO_bin(v2)
     return arr[ind1,1]+arr[ind2,3]-1
 
-### LIN LOOK FOR LEFT STATE ###
-def LinLook_LL(vec,arr):
-    ind=TO_bin(vec)
-    return arr[ind+1,1]
-
-
-### LIN LOOK FOR RIGHT STATE ###
-def LinLook_RR(vec,arr):
-    ind=TO_bin(vec)
-    return arr[ind+1,3]
-
-def Ham_Dense_Creation(LL,NN,Dim,D,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,LinTab):
-    """
-    Compute the Hamiltonian matrix
-
+def Ham_Dense_Creation(LL,NN,Dim,D,Jzz,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,LinTab):
+    """Compute the Hamiltonian matrix elements H_ij = <i|H|j> and create a dense H
     Args:
         LL(int)                         = Size of the chain
-        NN(int)                         = Number of particles
+        NN(int)                         = Number of spin-up
         Dim(int)                        = Dimension of the Hilbert SPACE
-        Dis_real(1d array of floats)    = Random disorder fields
+        D(float)                        = Disorder strength
+        Jzz(float)                      = Interaction strength
+        Dis_real(1d array of floats)    = Random fields
         BC(int)                         = Boundary conditions flag (0 ---> periodic
                                                                     1 ---> open)
         Base_bin(1d array of int)       = Configuration basis
@@ -188,7 +221,65 @@ def Ham_Dense_Creation(LL,NN,Dim,D,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,LinTab)
 
             if one_count(xx) == NN:
                 ham[bra,ket] = J/2
-                #ham[bra,ket] = J
+            uu = Base_Bin[i] & Hop_Bin[j]
+
+            if one_count(uu) == 1:
+                n_int -= 0.25
+            else:
+                n_int += 0.25
+
+            n_ones = Base_Bin[i] & int(2**(LL-j-1))
+            if n_ones != 0:
+                n_dis += 0.5*Dis_real[j]
+            else:
+                n_dis -= 0.5*Dis_real[j]
+
+        ham[bra,bra] = J*(Jzz*n_int + D*n_dis)
+
+    return ham
+
+def Ham_Sparse_Creation(LL,NN,Dim,D,Jzz,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,LinTab):
+    """Save i, j, <i|H|j> and create a sparse H
+    Args:
+        LL(int)                         = Size of the chain
+        NN(int)                         = Number of spin-up
+        Dim(int)                        = Dimension of the Hilbert SPACE
+        D(float)                        = Disorder strength
+        Jzz(float)                      = Interaction strength
+        Dis_real(1d array of floats)    = Random fields
+        BC(int)                         = Boundary conditions flag (0 ---> periodic
+                                                                    1 ---> open)
+        Base_bin(1d array of int)       = Configuration basis
+        Base_num(1d array of str)       = Basis states in binary representation
+        Hop_bin(1d array of floats)     = Hopping list
+        LinTab(2d array of int)         = Lookup table
+    Returns:
+        ham(CSC sparse matrix)          = Hamiltonian matrix
+    """
+
+    J=1.
+
+    if BC == 1:
+        Hop_dim=LL-1
+    else:
+        Hop_dim=LL
+    i_ind = []
+    j_ind = []
+    vals  = []
+    for i in range(Dim):
+        n_int = 0.0
+        n_dis = 0.0
+        bra = LinLook(Base_Bin[i],LL,LinTab)
+
+        for j in range(Hop_dim):
+            xx  = Base_Bin[i]^Hop_Bin[j]
+            ket = LinLook(xx,LL,LinTab)
+
+            if one_count(xx) == NN:
+                i_ind.append(bra)
+                j_ind.append(ket)
+                vals.append(J/2)
+
             uu = Base_Bin[i] & Hop_Bin[j]
 
             if one_count(uu) == 1:
@@ -205,8 +296,11 @@ def Ham_Dense_Creation(LL,NN,Dim,D,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,LinTab)
             else:
                 n_dis -= 0.5*Dis_real[j]
 
-        ham[bra,bra] = J*(n_int + D*n_dis)
+        i_ind.append(bra)
+        j_ind.append(bra)
+        vals.append(J*(Jzz*n_int + D*n_dis))
 
+    ham = _sp.coo_matrix((vals,(i_ind, j_ind))).tocsc()
     return ham
 
 def eigval(A):
@@ -217,7 +311,11 @@ def eigval(A):
         E(1d array of floats)           = Eigenvalues
         V(2d array of floats)           = Eigenvectors (in columns!)
     """
-    E, V = _la.eigh(A)
+    type = mat_format(A)
+    if type == 'Sparse':
+        E,V = _sp.linalg.eigsh(A, k = 100, which='SA', return_eigenvectors=True)
+    else:
+        E, V = _la.eigh(A)
     return E, V
 
 def levstat(E):
@@ -228,25 +326,34 @@ def levstat(E):
     Returns:
         avg(float)                      = Mean of r
     """
+    di = len(E)
     delta = E[1:]-E[:-1]
     r = list(map(lambda x,y:min(x,y)*1./max(x,y), delta[1:], delta[:-1]))
     avg = np.mean(r)
     return avg
 
-def InvPartRatio(Evec):
+def InvPartRatio(Evec,A):
     """Calculate participation ratios
     Args:
         Evec(2d array of floats)        = Eigenvectors (in columns)
     Returns:
         IPR(1d array of floats)         = Inverse participation ratio for each eigenstate
     """
-    IPR = np.zeros(len(Evec))
-    for i in range(len(Evec)):
-        IPR[i] = np.sum(Evec[i]**4)
-    return IPR
+    type = mat_format(A)
+    if type == 'Sparse':
+        IPR = np.zeros(50)
+        for i in range(len(IPR)):
+            IPR[i] = np.sum(Evec[:,i]**4)
+        IPR_sum = np.sum(IPR)
+    else:
+        IPR = np.zeros(len(Evec))
+        for i in range(len(IPR)):
+            IPR[i] = np.sum(Evec[:,i]**4)
+        IPR_sum = np.sum(IPR)
+    return IPR_sum
 
 def Psi_0(Dim, L, Base_num, in_flag):
-    """Index for the initial state for time evolution
+    """Index of the initial state for time evolution
     Args:
         Dim(int)                        = Dimension of Hilbert space
         L(int)                          = Size fo the chain
@@ -268,7 +375,7 @@ def Psi_0(Dim, L, Base_num, in_flag):
     return n
 
 def Proj_Psi0(a,V):
-    """Initial state projected on the eigenbasis
+    """Initial state projected on the configuration basis
     Args:
         a(int)                          = Index of the chosen initial state
         V(2d array of floats)           = Eigenvectors (in columns)
