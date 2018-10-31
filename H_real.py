@@ -83,12 +83,13 @@ def ExDiag(PATH_now,L,D, D_quench, Jzz):
 		steps = params.t_steps
 		dt = 0.1
 		t_f = dt*steps
+		t_tab = np.linspace(t_i, t_f, steps)
 
 		Psit = linalg.expm_multiply(A, Psi0, start=t_i, stop=t_f, num=steps, endpoint=True)
 		SurvP = [(-1/LL)*np.log(hf.Loschmidt(Psit[i], Psi0)) for i in range(len(Psit))]
 
 		nomefile_losch = str(PATH_now+'Losch.dat')
-		np.savetxt(nomefile_losch, SurvP, fmt='%.9f')
+		np.savetxt(nomefile_losch, np.c_[SurvP, t_tab], fmt='%.9f')
 
 	# ### TIME EVOLUTION AND OBSERVABLES ###
 	# t_i   = params.t_i

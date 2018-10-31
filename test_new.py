@@ -11,8 +11,10 @@ Jzz = params.Jz
 L = params.L
 D = params.D
 D_q = params.D_quench
-NN_RR = params.N_real
-
+if L < 20:
+    NN_RR = params.N_real
+else:
+    NN_RR = 100
 ### PATH DIRECTORY FOR OUTPUTS ###
 PATH_now = LOCAL
 directory = 'DATA/L_'+str(L)+'/D_'+str(D)

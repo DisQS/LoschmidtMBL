@@ -1,6 +1,6 @@
-L               = 18
-D               = 5.0
-D_quench        = 5.0
+L               = 12 
+D               = 6.0
+D_quench        = 6.0
 Jz              = 1.0
 BC              = 1
 Dis_gen         = 0
@@ -8,4 +8,4 @@ Format_flag     = 1
 In_flag         = 1
 t_i             = 0.0
 t_steps         = 200
-N_real          = 100
+N_real          = 500
