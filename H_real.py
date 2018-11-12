@@ -7,7 +7,7 @@ import scipy.sparse as _sp
 from scipy.sparse import linalg
 import params
 
-def ExDiag(PATH_now,L,D, D_quench, Jzz):
+def ExDiag(PATH_now,L,D, D_quench, Jzz, seed = None):
 	t0=time.time()
 
 	BC = params.BC
@@ -38,11 +38,11 @@ def ExDiag(PATH_now,L,D, D_quench, Jzz):
 	LinTab = hf.LinTab_Creation(int(LL),Base_num,Dim)
 
 	### DISORDER CREATION ###
-	Dis_real = hf.Dis_Creation(LL,Dis_gen)
+	Dis_real = hf.Dis_Creation(LL,Dis_gen, seed = seed)
 
 	### CREATION OF HAMILTONIAN MATRICES ###
 	if form_flag == 0:
-		HAM = hf.Ham_Dense_Creation(LL,NN,Dim,DD,Jzz,Dis_real,BC,Base_bin,Base_num,Hop_bin,LinTab)
+		HAM, dis0 = hf.Ham_Dense_Creation(LL,NN,Dim,DD,Jzz,Dis_real,BC,Base_bin,Base_num,Hop_bin,LinTab)
 	else:
 		HAM, dis0 = hf.Ham_Sparse_Creation(LL,NN,Dim,DD,Jzz,Dis_real,BC,Base_bin,Base_num,Hop_bin,LinTab)
 
@@ -88,7 +88,7 @@ def ExDiag(PATH_now,L,D, D_quench, Jzz):
 		Psit = linalg.expm_multiply(A, Psi0, start=t_i, stop=t_f, num=steps, endpoint=True)
 		SurvP = [(-1/LL)*np.log(hf.Loschmidt(Psit[i], Psi0)) for i in range(len(Psit))]
 
-		nomefile_losch = str(PATH_now+'Losch.dat')
+		nomefile_losch = str(PATH_now+'Losch.dat'+str(seed))
 		np.savetxt(nomefile_losch, np.c_[SurvP, t_tab], fmt='%.9f')
 
 	# ### TIME EVOLUTION AND OBSERVABLES ###
@@ -105,19 +105,19 @@ def ExDiag(PATH_now,L,D, D_quench, Jzz):
 	# 	nomefile_losch = str(PATH_now+'Losch_t' + str(t) + '.dat')
 	# 	with open(nomefile_losch, 'a') as file:
 	# 		file.write('%f' % Losch +"\n")
-	#
-	# 	VnEnt = ent.compute_entanglement_entropy(Psit, LL, NN, NN)
-	# 	nomefile_ent = str(PATH_now+'Ent_t' + str(t) + '.dat')
-	# 	with open(nomefile_ent, 'a') as file:
-	# 		file.write('%f' % VnEnt +"\n")
-	#
-	# 	Exp_Sz, Tot_Sz = hf.magnetization(Psit, Base_NumRes)
-	# 	nomefile_mag_profile = str(PATH_now+'Mag_t' + str(t) + '.dat')
-	# 	nomefile_totmag = str(PATH_now+'SzHalf_t' + str(t) + '.dat')
-	# 	with open(nomefile_mag_profile, 'w') as file:
-	# 		for i in range(len(Exp_Sz)):
-	# 			file.write('%f' % np.real(Exp_Sz[i]) +'   %i' % int(i+1) + '   %f'% t +'   %f' %np.sum(np.real(Exp_Sz))+"\n")
-	# 	with open(nomefile_totmag, 'w') as file:
-	# 		file.write('%f' % Tot_Sz + '\n')
+
+		# VnEnt = ent.compute_entanglement_entropy(Psit, LL, NN, NN)
+		# nomefile_ent = str(PATH_now+'Ent_t' + str(t) + '.dat')
+		# with open(nomefile_ent, 'a') as file:
+		# 	file.write('%f' % VnEnt +"\n")
+		#
+		# Exp_Sz, Tot_Sz = hf.magnetization(Psit, Base_NumRes)
+		# nomefile_mag_profile = str(PATH_now+'Mag_t' + str(t) + '.dat')
+		# nomefile_totmag = str(PATH_now+'SzHalf_t' + str(t) + '.dat')
+		# with open(nomefile_mag_profile, 'w') as file:
+		# 	for i in range(len(Exp_Sz)):
+		# 		file.write('%f' % np.real(Exp_Sz[i]) +'   %i' % int(i+1) + '   %f'% t +'   %f' %np.sum(np.real(Exp_Sz))+"\n")
+		# with open(nomefile_totmag, 'w') as file:
+		# 	file.write('%f' % Tot_Sz + '\n')
 
 	return 1

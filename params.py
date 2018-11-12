@@ -1,6 +1,7 @@
+seed            = 0
 L               = 12 
-D               = 6.0
-D_quench        = 6.0
+D               = 5.0
+D_quench        = 5.0
 Jz              = 1.0
 BC              = 1
 Dis_gen         = 0

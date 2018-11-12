@@ -10,7 +10,7 @@ import os
 import os.path
 from datetime import datetime
 import time
-
+from utils import *
 
 POPCOUNT_TABLE16 = [0] * 2**16
 for index in range(len(POPCOUNT_TABLE16)):
@@ -102,21 +102,24 @@ def Hop_prep(L,BC):
         Hop_dim=L
     return [TO_con(2**i+2**((i+1)%L),L) for i in range(Hop_dim)]
 
-def Dis_Creation(LL,Dis_gen):
+def Dis_Creation(LL,Dis_gen, seed = None, beta = None):
     """Random fields creation
     Args:
         LL(int)                         = Size of the chain
         Dis_gen(int)                    = Disorder flag (0 ---> Random
                                                          1 ---> Quasiperiodic)
+        seed(int)                       = Seed for random number generator
     Returns:
         dis(1d array of floats)         = Random field per site
     """
-    dis = np.zeros(LL, dtype=np.float)
-    for i in range(LL):
-        if Dis_gen==0:
-            dis[i] = 2*np.random.random()-1
-        else:
-            dis[i] = np.cos(2*math.pi*0.721*i/LL)
+    if seed is not None:
+        np.random.seed(seed)
+    if Dis_gen==0:
+        dis = 2*np.random.rand(LL)-1.0
+    #     elif beta is None:
+    #         beta = (5**0.5 - 1) / 2
+    #         delta = 2 * np.pi * np.random.random()
+    #         dis[i] = np.cos(2*np.pi*beta*i/LL+ delta)
     return dis
 
 def LinTab_Creation(LL,Base,di):
@@ -204,6 +207,7 @@ def Ham_Dense_Creation(LL,NN,Dim,D,Jzz,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,Lin
     J=1.
 
     ham = np.zeros((Dim,Dim), dtype=np.float)
+    dis = []
 
     if BC == 1:
         Hop_dim=LL-1
@@ -233,10 +237,10 @@ def Ham_Dense_Creation(LL,NN,Dim,D,Jzz,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,Lin
                 n_dis += 0.5*Dis_real[j]
             else:
                 n_dis -= 0.5*Dis_real[j]
-
+        dis.append(n_dis)
         ham[bra,bra] = J*(Jzz*n_int + D*n_dis)
 
-    return ham
+    return ham, dis
 
 def Ham_Sparse_Creation(LL,NN,Dim,D,Jzz,Dis_real,BC,Base_Bin,Base_Num,Hop_Bin,LinTab):
     """Save i, j, <i|H|j> and create a sparse H
@@ -386,30 +390,54 @@ def Proj_Psi0(a,V):
     """
     return V[a]
 
-def TimEvolve(Proj_Psi0, E, t):
+def TimEvolve_dense(psi0, E, V, t, iterate = False):
     """Time evolution of initial state
     Args:
         Proj_Psi0(1d array of floats)   = Initial state
         E(1d array of floats)           = Eigenspectrum
-        t(float)                        = Time
+        V(2d array of floats)           = Eigenvectors
+        t(1d array of floats)           = Vector with times
     Returns:
         psit(1d array of complex)       = State evolved at time t
     """
-    psit0 = Proj_Psi0
-    psit = np.exp(-1j*E*t)*psit0
-    return psit
+    psi0 = np.squeeze(psi0)
 
-def Loschmidt(Psi_t, Proj_Psi0):
+    it = -1.0j*np.asarray(t)
+
+    # pure states
+    if psi0.ndim == 1:
+        c_n = dot(dag(V), psi0)
+        N_t = len(it)
+        N_s = len(E)
+
+        psit = np.broadcast_to(it, (N_s, N_t)).T
+        psit = psit*E
+        np.exp(psit,psit)
+        psit *= c_n
+        psit = dot(V, psit.T)
+
+        return psit
+    else:
+        N_t = len(it)
+        N_s = len(E)
+
+        rho = dot(dag(V), dot(psi0, V))
+        exp_t = np.broadcast_to(it, (N_s, N_t)).T
+        exp_t = exp_t*E
+        np.exp(exp_t, exp_t)
+
+        return np.einsum("ij, tj, jk, tk, lk->ilt", V, exp_t, rho, exp_t.conj(), V.conj())
+
+def Loschmidt(psi0, psit):
     """Calculate survival probability at time t
     (see Markus Heyl review, Rep. Prog. Phys. 81, 054001 (2018))
     Args:
-        Psit(1d array of complex)       = State evolved at time t
-        Proj_Psi0(1d array of floats)   = Initial state
+        psi0(1d array of complex)       = Initial state
+        psit(1d array of floats)        = State at time t
     Returns:
         L(float)                        = Loschmidt echo at time t
     """
-    L = np.square(np.absolute(np.dot(Proj_Psi0, Psi_t)))
-    return L
+    return expec(psi0, psit)
 
 def magnetization(V,Base_NumRes):
     """Calculate magnetization profile and total magnetization for half-chain (not conserved)
@@ -421,7 +449,7 @@ def magnetization(V,Base_NumRes):
         Sz(1d array of floats)          = Magnetization value at each site
         Tot_Sz(float)                   = Total magnetization for half chain
     """
-    Sz   = np.dot(np.transpose(V**2),Base_NumRes)
+    Sz   = np.dot(Base_NumRes,(np.dot(V.T,Base_NumRes)))
     Ch_L = len(Sz)
     Tot_Sz = np.sum(np.real(Sz[0:int((Ch_L/2-1))]))
     return Sz, Tot_Sz
