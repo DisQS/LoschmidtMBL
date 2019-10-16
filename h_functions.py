@@ -187,6 +187,26 @@ def SxSxCorr(L, psi_t, basis, SS='xx'):
 
     return corr_mean
 
+def Sent(psit, basis, subsys=None, return_rdm=None):
+    """Return the entanglement entropy of psi, living in basis <basis>, computed in the reduced subsystem specified by subsys
+    subsys = list of site labels [0, 1, ..., k] specifying the subsystem. If subsys=None,  defaults to 0....N/2 -1
+
+    return_rdm can be specified as 'A' (the subsystem of interest), 'B', or both; if so a dictionary is returned
+    """
+    if subsys is None:
+        #default partition ---> half-chain
+        subsys=tuple(range(basis.N//2))
+    S_tab = np.zeros(len(psit.T))
+    for i, psi in enumerate(psit.T):
+        sdict= basis.ent_entropy(psi, sub_sys_A=subsys,return_rdm=return_rdm)
+        # the quspin value is normalized by the subsystem size
+        SA= sdict['Sent_A'] * len(subsys)
+        if return_rdm is not None:
+            sdict['Sent_A']=SA
+            return sdict
+        S_tab[i] = SA
+    return S_tab
+
 ### DATA DIRECTORIES AND DATA FILES CREATION ###
 
 def generate_directory(basename, para, namesub):
